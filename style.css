@@ -2,30 +2,18 @@ body {
     font-family: sans-serif;
 }
 
-.content-section {
+.conteudo-secao {
     padding: 20px;
     border: 1px solid #eee;
     border-radius: 5px;
     background-color: #f9f9f9;
+    margin-bottom: 20px;
 }
 
-/* Para impressão do comprovante */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #modalComprovante .modal-dialog, #modalComprovante .modal-content, #modalComprovante .modal-body, #modalComprovante .modal-body * {
-    visibility: visible;
-  }
-  #modalComprovante .modal-dialog {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-  }
-  #modalComprovante .modal-header, #modalComprovante .modal-footer {
-      display: none;
-  }
+.navbar-nav .nav-link.active {
+    font-weight: bold;
+}
+.form-label-sm {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
 }

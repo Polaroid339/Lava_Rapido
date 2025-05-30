@@ -1,737 +1,692 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Data Storage & Utils ---
-    const getFromStorage = (key) => JSON.parse(localStorage.getItem(key)) || [];
-    const saveToStorage = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+let clientes = JSON.parse(localStorage.getItem('der_clientes')) || [];
+let veiculos = JSON.parse(localStorage.getItem('der_veiculos')) || [];
+let funcionarios = JSON.parse(localStorage.getItem('der_funcionarios')) || [];
+let atendimentos = JSON.parse(localStorage.getItem('der_atendimentos')) || [];
+let servicos_atendimento = JSON.parse(localStorage.getItem('der_servicos_atendimento')) || [];
+let caixa = JSON.parse(localStorage.getItem('der_caixa')) || [];
+let agendamentos = JSON.parse(localStorage.getItem('der_agendamentos')) || [];
 
-    let clientes = getFromStorage('clientes');
-    let veiculos = getFromStorage('veiculos');
-    let funcionarios = getFromStorage('funcionarios');
-    let servicos = getFromStorage('servicos');
-    let agendamentos = getFromStorage('agendamentos');
-    let pagamentos = getFromStorage('pagamentos');
+let proximoId = (arr) => arr.length > 0 ? Math.max(...arr.map(item => item.id)) + 1 : 1;
 
-    const getNextId = (array) => array.length > 0 ? Math.max(...array.map(item => item.id)) + 1 : 1;
+const modalAddCliente = new bootstrap.Modal(document.getElementById('modalAddCliente'));
+const modalAddVeiculo = new bootstrap.Modal(document.getElementById('modalAddVeiculo'));
+const modalNovoAtendimento = new bootstrap.Modal(document.getElementById('modalNovoAtendimento'));
+const modalRegistrarPagamento = new bootstrap.Modal(document.getElementById('modalRegistrarPagamento'));
+const modalAddAgendamento = new bootstrap.Modal(document.getElementById('modalAddAgendamento'));
+const modalAddFuncionario = new bootstrap.Modal(document.getElementById('modalAddFuncionario'));
+const modalEditFuncionario = new bootstrap.Modal(document.getElementById('modalEditFuncionario'));
 
-    // --- Navigation ---
-    const navLinks = document.querySelectorAll('.nav-link');
-    const contentSections = document.querySelectorAll('.content-section');
+let servicosTemporariosDoAtendimento = [];
 
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+function salvarDados() {
+    localStorage.setItem('der_clientes', JSON.stringify(clientes));
+    localStorage.setItem('der_veiculos', JSON.stringify(veiculos));
+    localStorage.setItem('der_funcionarios', JSON.stringify(funcionarios));
+    localStorage.setItem('der_atendimentos', JSON.stringify(atendimentos));
+    localStorage.setItem('der_servicos_atendimento', JSON.stringify(servicos_atendimento));
+    localStorage.setItem('der_caixa', JSON.stringify(caixa));
+    localStorage.setItem('der_agendamentos', JSON.stringify(agendamentos));
+}
 
-            const targetId = link.getAttribute('data-target');
-            contentSections.forEach(section => {
-                section.classList.add('d-none');
-                if (section.id === targetId) {
-                    section.classList.remove('d-none');
-                }
-            });
-            // Atualizar dados ao mudar de aba
-            if (targetId === 'homeContent') renderHomeDashboard();
-            if (targetId === 'clientesVeiculosContent') { renderClientes(); renderVeiculos(); }
-            if (targetId === 'fluxoServicosContent') renderServicosAtivos();
-            if (targetId === 'agendamentosContent') renderAgendamentos();
-            if (targetId === 'funcionariosContent') renderFuncionarios();
-            if (targetId === 'pagamentosContent') { renderServicosParaPagamento(); renderPagamentosRealizados(); }
-            if (targetId === 'relatoriosContent') renderRelatorios();
-        });
+function mostrarSecao(idSecao) {
+    document.querySelectorAll('.conteudo-secao').forEach(secao => secao.style.display = 'none');
+    document.getElementById(idSecao).style.display = 'block';
+    document.querySelectorAll('.navbar-nav .nav-link').forEach(link => link.classList.remove('active'));
+    event.target.classList.add('active');
+    atualizarDashboard();
+}
+
+document.getElementById('formAddCliente').addEventListener('submit', function(e) {
+    e.preventDefault();
+    clientes.push({
+        id: proximoId(clientes),
+        nomeCliente: document.getElementById('clienteNome').value,
+        telefone: document.getElementById('clienteTelefone').value,
+        email: document.getElementById('clienteEmail').value
     });
-
-    // --- Modals Instances (para controle programático) ---
-    const modalAddCliente = new bootstrap.Modal(document.getElementById('modalAddCliente'));
-    const modalAddVeiculo = new bootstrap.Modal(document.getElementById('modalAddVeiculo'));
-    const modalAddServico = new bootstrap.Modal(document.getElementById('modalAddServico'));
-    const modalAddAgendamento = new bootstrap.Modal(document.getElementById('modalAddAgendamento'));
-    const modalAddFuncionario = new bootstrap.Modal(document.getElementById('modalAddFuncionario'));
-    const modalRegistrarPagamento = new bootstrap.Modal(document.getElementById('modalRegistrarPagamento'));
-    const modalComprovante = new bootstrap.Modal(document.getElementById('modalComprovante'));
-
-    // --- Helper: Populate Select Options ---
-    function populateSelect(selectId, data, valueField, textField, defaultOptionText = "Selecione") {
-        const select = document.getElementById(selectId);
-        select.innerHTML = `<option value="">${defaultOptionText}</option>`;
-        data.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item[valueField];
-            option.textContent = typeof textField === 'function' ? textField(item) : item[textField];
-            select.appendChild(option);
-        });
-    }
-    
-    // --- Clientes ---
-    const formAddCliente = document.getElementById('formAddCliente');
-    const listaClientes = document.getElementById('listaClientes');
-
-    formAddCliente.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('clienteId').value;
-        const nome = document.getElementById('clienteNome').value;
-        const cpf = document.getElementById('clienteCpf').value;
-        const contato = document.getElementById('clienteContato').value;
-
-        if (id) { // Edit
-            const cliente = clientes.find(c => c.id === parseInt(id));
-            cliente.nome = nome;
-            cliente.cpf = cpf;
-            cliente.contato = contato;
-        } else { // Add
-            const novoCliente = {
-                id: getNextId(clientes),
-                nome,
-                cpf,
-                contato,
-                dataCadastro: new Date().toLocaleDateString('pt-BR'),
-                veiculos: [] // Array of veiculo IDs
-            };
-            clientes.push(novoCliente);
-        }
-        saveToStorage('clientes', clientes);
-        renderClientes();
-        formAddCliente.reset();
-        document.getElementById('clienteId').value = '';
-        modalAddCliente.hide();
-    });
-
-    function renderClientes() {
-        listaClientes.innerHTML = '';
-        clientes.forEach(cliente => {
-            const veiculosDoCliente = veiculos.filter(v => v.clienteId === cliente.id).map(v => v.placa).join(', ') || 'Nenhum';
-            const row = listaClientes.insertRow();
-            row.innerHTML = `
-                <td>${cliente.nome}</td>
-                <td>${cliente.cpf}</td>
-                <td>${cliente.contato}</td>
-                <td>${veiculosDoCliente}</td>
-                <td>
-                    <button class="btn btn-sm btn-warning btn-edit-cliente" data-id="${cliente.id}">Editar</button>
-                    <button class="btn btn-sm btn-danger btn-delete-cliente" data-id="${cliente.id}">Excluir</button>
-                </td>
-            `;
-        });
-        populateClienteSelectors(); // Atualiza selects que usam clientes
-    }
-
-    listaClientes.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-edit-cliente')) {
-            const id = parseInt(e.target.dataset.id);
-            const cliente = clientes.find(c => c.id === id);
-            document.getElementById('clienteId').value = cliente.id;
-            document.getElementById('clienteNome').value = cliente.nome;
-            document.getElementById('clienteCpf').value = cliente.cpf;
-            document.getElementById('clienteContato').value = cliente.contato;
-            modalAddCliente.show();
-        }
-        if (e.target.classList.contains('btn-delete-cliente')) {
-            const id = parseInt(e.target.dataset.id);
-            if (confirm('Tem certeza que deseja excluir este cliente? Veículos associados também serão afetados.')) {
-                clientes = clientes.filter(c => c.id !== id);
-                // Opcional: desassociar ou excluir veículos do cliente
-                veiculos = veiculos.map(v => {
-                    if (v.clienteId === id) v.clienteId = null; // ou excluir v
-                    return v;
-                }).filter(v => v.clienteId !== null); // Exclui se optou por deletar
-                
-                saveToStorage('clientes', clientes);
-                saveToStorage('veiculos', veiculos);
-                renderClientes();
-                renderVeiculos();
-            }
-        }
-    });
-
-    // --- Veículos ---
-    const formAddVeiculo = document.getElementById('formAddVeiculo');
-    const listaVeiculos = document.getElementById('listaVeiculos');
-
-    function populateClienteSelectors() {
-        populateSelect('veiculoClienteId', clientes, 'id', 'nome', 'Selecione o Proprietário');
-    }
-
-    formAddVeiculo.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('veiculoId').value;
-        const placa = document.getElementById('veiculoPlaca').value.toUpperCase();
-        const modelo = document.getElementById('veiculoModelo').value;
-        const ano = document.getElementById('veiculoAno').value;
-        const cor = document.getElementById('veiculoCor').value;
-        const clienteId = parseInt(document.getElementById('veiculoClienteId').value);
-
-        if (id) { // Edit
-            const veiculo = veiculos.find(v => v.id === parseInt(id));
-            // Remover do cliente antigo se mudou
-            if (veiculo.clienteId && veiculo.clienteId !== clienteId) {
-                const clienteAntigo = clientes.find(c => c.id === veiculo.clienteId);
-                if (clienteAntigo) clienteAntigo.veiculos = clienteAntigo.veiculos.filter(vid => vid !== veiculo.id);
-            }
-            veiculo.placa = placa;
-            veiculo.modelo = modelo;
-            veiculo.ano = ano;
-            veiculo.cor = cor;
-            veiculo.clienteId = clienteId;
-        } else { // Add
-            const novoVeiculo = {
-                id: getNextId(veiculos),
-                placa,
-                modelo,
-                ano,
-                cor,
-                clienteId
-            };
-            veiculos.push(novoVeiculo);
-        }
-        // Associar ao novo cliente
-        if (clienteId) {
-             const cliente = clientes.find(c => c.id === clienteId);
-             if (cliente && !cliente.veiculos.includes(id ? parseInt(id) : veiculos[veiculos.length-1].id) ) {
-                 cliente.veiculos.push(id ? parseInt(id) : veiculos[veiculos.length-1].id);
-             }
-        }
-
-        saveToStorage('veiculos', veiculos);
-        saveToStorage('clientes', clientes); // Salva clientes por causa da associação
-        renderVeiculos();
-        renderClientes(); // Atualiza lista de veículos dos clientes
-        formAddVeiculo.reset();
-        document.getElementById('veiculoId').value = '';
-        modalAddVeiculo.hide();
-    });
-
-    function renderVeiculos() {
-        listaVeiculos.innerHTML = '';
-        veiculos.forEach(veiculo => {
-            const proprietario = clientes.find(c => c.id === veiculo.clienteId);
-            const row = listaVeiculos.insertRow();
-            row.innerHTML = `
-                <td>${veiculo.placa}</td>
-                <td>${veiculo.modelo}</td>
-                <td>${veiculo.ano}</td>
-                <td>${veiculo.cor}</td>
-                <td>${proprietario ? proprietario.nome : 'Sem proprietário'}</td>
-                <td>
-                    <button class="btn btn-sm btn-warning btn-edit-veiculo" data-id="${veiculo.id}">Editar</button>
-                    <button class="btn btn-sm btn-danger btn-delete-veiculo" data-id="${veiculo.id}">Excluir</button>
-                </td>
-            `;
-        });
-        populateVeiculoSelectors(); // Atualiza selects que usam veículos
-    }
-    
-    listaVeiculos.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-edit-veiculo')) {
-            const id = parseInt(e.target.dataset.id);
-            const veiculo = veiculos.find(v => v.id === id);
-            document.getElementById('veiculoId').value = veiculo.id;
-            document.getElementById('veiculoPlaca').value = veiculo.placa;
-            document.getElementById('veiculoModelo').value = veiculo.modelo;
-            document.getElementById('veiculoAno').value = veiculo.ano;
-            document.getElementById('veiculoCor').value = veiculo.cor;
-            document.getElementById('veiculoClienteId').value = veiculo.clienteId || "";
-            modalAddVeiculo.show();
-        }
-        if (e.target.classList.contains('btn-delete-veiculo')) {
-            const id = parseInt(e.target.dataset.id);
-            if (confirm('Tem certeza que deseja excluir este veículo?')) {
-                const veiculo = veiculos.find(v => v.id === id);
-                if(veiculo && veiculo.clienteId){
-                    const cliente = clientes.find(c => c.id === veiculo.clienteId);
-                    if(cliente) cliente.veiculos = cliente.veiculos.filter(vid => vid !== id);
-                }
-                veiculos = veiculos.filter(v => v.id !== id);
-                saveToStorage('veiculos', veiculos);
-                saveToStorage('clientes', clientes);
-                renderVeiculos();
-                renderClientes();
-            }
-        }
-    });
-
-    // --- Funcionários ---
-    const formAddFuncionario = document.getElementById('formAddFuncionario');
-    const listaFuncionarios = document.getElementById('listaFuncionarios');
-
-    formAddFuncionario.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('funcionarioId').value;
-        const nome = document.getElementById('funcionarioNome').value;
-        const cargo = document.getElementById('funcionarioCargo').value;
-
-        if (id) { // Edit
-            const funcionario = funcionarios.find(f => f.id === parseInt(id));
-            funcionario.nome = nome;
-            funcionario.cargo = cargo;
-        } else { // Add
-            funcionarios.push({ id: getNextId(funcionarios), nome, cargo });
-        }
-        saveToStorage('funcionarios', funcionarios);
-        renderFuncionarios();
-        formAddFuncionario.reset();
-        document.getElementById('funcionarioId').value = '';
-        modalAddFuncionario.hide();
-    });
-
-    function renderFuncionarios() {
-        listaFuncionarios.innerHTML = '';
-        funcionarios.forEach(func => {
-            const row = listaFuncionarios.insertRow();
-            row.innerHTML = `
-                <td>${func.nome}</td>
-                <td>${func.cargo}</td>
-                <td>
-                    <button class="btn btn-sm btn-warning btn-edit-funcionario" data-id="${func.id}">Editar</button>
-                    <button class="btn btn-sm btn-danger btn-delete-funcionario" data-id="${func.id}">Excluir</button>
-                </td>
-            `;
-        });
-        populateFuncionarioSelectors();
-    }
-
-    listaFuncionarios.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-edit-funcionario')) {
-            const id = parseInt(e.target.dataset.id);
-            const funcionario = funcionarios.find(f => f.id === id);
-            document.getElementById('funcionarioId').value = funcionario.id;
-            document.getElementById('funcionarioNome').value = funcionario.nome;
-            document.getElementById('funcionarioCargo').value = funcionario.cargo;
-            modalAddFuncionario.show();
-        }
-        if (e.target.classList.contains('btn-delete-funcionario')) {
-            const id = parseInt(e.target.dataset.id);
-            if (confirm('Tem certeza que deseja excluir este funcionário?')) {
-                funcionarios = funcionarios.filter(f => f.id !== id);
-                saveToStorage('funcionarios', funcionarios);
-                renderFuncionarios();
-            }
-        }
-    });
-
-    // --- Fluxo de Serviços ---
-    const formAddServico = document.getElementById('formAddServico');
-    const listaServicosAtivos = document.getElementById('listaServicosAtivos');
-
-    function populateVeiculoSelectors() {
-        populateSelect('servicoVeiculoId', veiculos, 'id', (v) => `${v.placa} - ${v.modelo}`, 'Selecione o Veículo');
-    }
-    function populateFuncionarioSelectors() {
-        populateSelect('servicoFuncionarioId', funcionarios, 'id', 'nome', 'Nenhum');
-    }
-
-    formAddServico.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('servicoId').value;
-        const veiculoId = parseInt(document.getElementById('servicoVeiculoId').value);
-        const tipoServico = document.getElementById('servicoTipo').value;
-        const valor = parseFloat(document.getElementById('servicoValor').value);
-        const funcionarioId = document.getElementById('servicoFuncionarioId').value ? parseInt(document.getElementById('servicoFuncionarioId').value) : null;
-        
-        if (id) { // Edit (atualizar status, funcionario, etc)
-            const servico = servicos.find(s => s.id === parseInt(id));
-            servico.veiculoId = veiculoId;
-            servico.tipoServico = tipoServico;
-            servico.valor = valor;
-            servico.funcionarioId = funcionarioId;
-            servico.status = document.getElementById('servicoStatus').value;
-            if (servico.status === 'Concluído' && !servico.dataSaida) {
-                servico.dataSaida = new Date().toISOString();
-            }
-        } else { // Add new service
-            const novoServico = {
-                id: getNextId(servicos),
-                veiculoId,
-                tipoServico,
-                valor,
-                funcionarioId,
-                dataEntrada: new Date().toISOString(),
-                dataSaida: null,
-                status: 'Em Espera', // Ou 'Em Serviço' se já atribuir funcionário
-                pago: false
-            };
-            if (funcionarioId) novoServico.status = 'Em Serviço';
-            servicos.push(novoServico);
-        }
-        saveToStorage('servicos', servicos);
-        renderServicosAtivos();
-        renderHomeDashboard();
-        renderServicosParaPagamento();
-        renderRelatorios();
-        formAddServico.reset();
-        document.getElementById('servicoId').value = '';
-        document.getElementById('servicoModalTitle').textContent = 'Registrar Entrada de Veículo';
-        document.getElementById('divServicoStatus').style.display = 'none';
-        modalAddServico.hide();
-    });
-
-    function renderServicosAtivos() {
-        listaServicosAtivos.innerHTML = '';
-        const ativos = servicos.filter(s => s.status === 'Em Espera' || s.status === 'Em Serviço');
-        ativos.forEach(servico => {
-            const veiculo = veiculos.find(v => v.id === servico.veiculoId);
-            const funcionario = funcionarios.find(f => f.id === servico.funcionarioId);
-            const row = listaServicosAtivos.insertRow();
-            row.innerHTML = `
-                <td>${veiculo ? veiculo.placa : 'N/A'}</td>
-                <td>${veiculo ? veiculo.modelo : 'N/A'}</td>
-                <td>${servico.tipoServico}</td>
-                <td>${funcionario ? funcionario.nome : 'Não atribuído'}</td>
-                <td>${new Date(servico.dataEntrada).toLocaleString('pt-BR')}</td>
-                <td><span class="badge bg-${servico.status === 'Em Espera' ? 'warning' : 'info'}">${servico.status}</span></td>
-                <td>
-                    <button class="btn btn-sm btn-info btn-edit-servico" data-id="${servico.id}">Gerenciar</button>
-                    ${servico.status !== 'Concluído' ? `<button class="btn btn-sm btn-success btn-concluir-servico" data-id="${servico.id}">Concluir</button>` : ''}
-                    <button class="btn btn-sm btn-danger btn-cancelar-servico" data-id="${servico.id}">Cancelar</button>
-                </td>
-            `;
-        });
-    }
-    
-    listaServicosAtivos.addEventListener('click', (e) => {
-        const id = parseInt(e.target.dataset.id);
-        if (e.target.classList.contains('btn-edit-servico')) {
-            const servico = servicos.find(s => s.id === id);
-            document.getElementById('servicoId').value = servico.id;
-            document.getElementById('servicoVeiculoId').value = servico.veiculoId;
-            document.getElementById('servicoTipo').value = servico.tipoServico;
-            document.getElementById('servicoValor').value = servico.valor;
-            document.getElementById('servicoFuncionarioId').value = servico.funcionarioId || "";
-            document.getElementById('servicoStatus').value = servico.status;
-            document.getElementById('servicoModalTitle').textContent = 'Gerenciar Serviço';
-            document.getElementById('divServicoStatus').style.display = 'block';
-            modalAddServico.show();
-        }
-        if (e.target.classList.contains('btn-concluir-servico')) {
-            const servico = servicos.find(s => s.id === id);
-            if (servico) {
-                servico.status = 'Concluído';
-                servico.dataSaida = new Date().toISOString();
-                saveToStorage('servicos', servicos);
-                renderServicosAtivos();
-                renderHomeDashboard();
-                renderServicosParaPagamento();
-                renderRelatorios();
-            }
-        }
-        if (e.target.classList.contains('btn-cancelar-servico')) {
-            if (confirm('Tem certeza que deseja cancelar este serviço?')) {
-                const servico = servicos.find(s => s.id === id);
-                if (servico) {
-                    servico.status = 'Cancelado';
-                    servico.dataSaida = new Date().toISOString(); // Pode ser útil registrar quando foi cancelado
-                    saveToStorage('servicos', servicos);
-                    renderServicosAtivos();
-                    renderHomeDashboard();
-                    renderRelatorios();
-                }
-            }
-        }
-    });
-
-    // --- Agendamentos ---
-    const formAddAgendamento = document.getElementById('formAddAgendamento');
-    const listaAgendamentos = document.getElementById('listaAgendamentos');
-
-    formAddAgendamento.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('agendamentoId').value;
-        const clienteNome = document.getElementById('agendamentoClienteNome').value;
-        const veiculoInfo = document.getElementById('agendamentoVeiculoInfo').value;
-        const dataHora = document.getElementById('agendamentoDataHora').value;
-        const servicoDesejado = document.getElementById('agendamentoServicoDesejado').value;
-
-        if (id) { // Edit
-            const ag = agendamentos.find(a => a.id === parseInt(id));
-            ag.clienteNome = clienteNome;
-            ag.veiculoInfo = veiculoInfo;
-            ag.dataHora = dataHora;
-            ag.servicoDesejado = servicoDesejado;
-        } else { // Add
-            agendamentos.push({
-                id: getNextId(agendamentos),
-                clienteNome,
-                veiculoInfo,
-                dataHora,
-                servicoDesejado,
-                status: 'Pendente' // Pendente, Confirmado, Realizado, Cancelado
-            });
-        }
-        agendamentos.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora)); // Ordena por data
-        saveToStorage('agendamentos', agendamentos);
-        renderAgendamentos();
-        renderHomeDashboard();
-        formAddAgendamento.reset();
-        document.getElementById('agendamentoId').value = '';
-        modalAddAgendamento.hide();
-    });
-
-    function renderAgendamentos() {
-        listaAgendamentos.innerHTML = '';
-        const agora = new Date();
-        const agendamentosFiltrados = agendamentos.filter(ag => new Date(ag.dataHora) >= agora || ag.status === 'Pendente' || ag.status === 'Confirmado');
-
-        if (agendamentosFiltrados.length === 0) {
-            listaAgendamentos.innerHTML = '<p class="text-muted">Nenhum agendamento futuro.</p>';
-            return;
-        }
-
-        agendamentosFiltrados.forEach(ag => {
-            const item = document.createElement('div');
-            item.className = 'list-group-item list-group-item-action flex-column align-items-start';
-            const dataHoraFormatada = new Date(ag.dataHora).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'});
-            
-            let statusBadge = '';
-            if (ag.status === 'Pendente') statusBadge = `<span class="badge bg-warning text-dark">Pendente</span>`;
-            else if (ag.status === 'Confirmado') statusBadge = `<span class="badge bg-info">Confirmado</span>`;
-            else if (ag.status === 'Realizado') statusBadge = `<span class="badge bg-success">Realizado</span>`;
-            else if (ag.status === 'Cancelado') statusBadge = `<span class="badge bg-danger">Cancelado</span>`;
-
-            item.innerHTML = `
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">${ag.clienteNome} - ${ag.veiculoInfo}</h5>
-                    <small>${dataHoraFormatada} ${statusBadge}</small>
-                </div>
-                <p class="mb-1">Serviço: ${ag.servicoDesejado}</p>
-                <small>
-                    <button class="btn btn-sm btn-outline-primary btn-edit-agendamento" data-id="${ag.id}">Editar</button>
-                    <button class="btn btn-sm btn-outline-danger btn-delete-agendamento" data-id="${ag.id}">Cancelar</button>
-                    ${ag.status === 'Pendente' ? `<button class="btn btn-sm btn-outline-success btn-confirmar-agendamento" data-id="${ag.id}">Confirmar</button>` : ''}
-                </small>
-            `;
-            listaAgendamentos.appendChild(item);
-        });
-    }
-
-    listaAgendamentos.addEventListener('click', (e) => {
-        const id = parseInt(e.target.dataset.id);
-        if (e.target.classList.contains('btn-edit-agendamento')) {
-            const ag = agendamentos.find(a => a.id === id);
-            document.getElementById('agendamentoId').value = ag.id;
-            document.getElementById('agendamentoClienteNome').value = ag.clienteNome;
-            document.getElementById('agendamentoVeiculoInfo').value = ag.veiculoInfo;
-            document.getElementById('agendamentoDataHora').value = ag.dataHora;
-            document.getElementById('agendamentoServicoDesejado').value = ag.servicoDesejado;
-            modalAddAgendamento.show();
-        }
-        if (e.target.classList.contains('btn-delete-agendamento')) { // Logicamente um cancelamento
-            if (confirm('Tem certeza que deseja cancelar este agendamento?')) {
-                const ag = agendamentos.find(a => a.id === id);
-                ag.status = 'Cancelado';
-                // agendamentos = agendamentos.filter(a => a.id !== id); // ou marcar como cancelado
-                saveToStorage('agendamentos', agendamentos);
-                renderAgendamentos();
-                renderHomeDashboard();
-            }
-        }
-        if (e.target.classList.contains('btn-confirmar-agendamento')) {
-            const ag = agendamentos.find(a => a.id === id);
-            ag.status = 'Confirmado';
-            saveToStorage('agendamentos', agendamentos);
-            renderAgendamentos();
-            renderHomeDashboard();
-        }
-    });
-    
-    // --- Pagamentos ---
-    const formRegistrarPagamento = document.getElementById('formRegistrarPagamento');
-    const listaServicosParaPagamento = document.getElementById('listaServicosParaPagamento');
-    const listaPagamentosRealizados = document.getElementById('listaPagamentosRealizados');
-
-    function renderServicosParaPagamento() {
-        listaServicosParaPagamento.innerHTML = '';
-        const aPagar = servicos.filter(s => s.status === 'Concluído' && !s.pago);
-        aPagar.forEach(servico => {
-            const veiculo = veiculos.find(v => v.id === servico.veiculoId);
-            const cliente = veiculo ? clientes.find(c => c.id === veiculo.clienteId) : null;
-            const row = listaServicosParaPagamento.insertRow();
-            row.innerHTML = `
-                <td>${veiculo ? veiculo.placa : 'N/A'}</td>
-                <td>${cliente ? cliente.nome : 'N/A'}</td>
-                <td>${servico.tipoServico}</td>
-                <td>R$ ${servico.valor.toFixed(2)}</td>
-                <td><button class="btn btn-sm btn-success btn-registrar-pagamento" data-id="${servico.id}">Registrar Pagamento</button></td>
-            `;
-        });
-    }
-
-    listaServicosParaPagamento.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-registrar-pagamento')) {
-            const id = parseInt(e.target.dataset.id);
-            const servico = servicos.find(s => s.id === id);
-            const veiculo = veiculos.find(v => v.id === servico.veiculoId);
-            document.getElementById('pagamentoServicoId').value = servico.id;
-            document.getElementById('pagamentoInfoServico').textContent = `${servico.tipoServico} - ${veiculo.placa}`;
-            document.getElementById('pagamentoInfoValor').textContent = `R$ ${servico.valor.toFixed(2)}`;
-            modalRegistrarPagamento.show();
-        }
-    });
-
-    formRegistrarPagamento.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const servicoId = parseInt(document.getElementById('pagamentoServicoId').value);
-        const formaPagamento = document.getElementById('pagamentoForma').value;
-        
-        const servico = servicos.find(s => s.id === servicoId);
-        if (servico) {
-            servico.pago = true;
-            const novoPagamento = {
-                id: getNextId(pagamentos),
-                servicoId,
-                dataPagamento: new Date().toISOString(),
-                valor: servico.valor,
-                formaPagamento
-            };
-            pagamentos.push(novoPagamento);
-            
-            saveToStorage('servicos', servicos);
-            saveToStorage('pagamentos', pagamentos);
-            renderServicosParaPagamento();
-            renderPagamentosRealizados();
-            renderRelatorios();
-            formRegistrarPagamento.reset();
-            modalRegistrarPagamento.hide();
-            alert('Pagamento registrado com sucesso!');
-        }
-    });
-
-    function renderPagamentosRealizados() {
-        listaPagamentosRealizados.innerHTML = '';
-        pagamentos.sort((a,b) => new Date(b.dataPagamento) - new Date(a.dataPagamento) ); // Mais recentes primeiro
-        pagamentos.forEach(pag => {
-            const servico = servicos.find(s => s.id === pag.servicoId);
-            const veiculo = servico ? veiculos.find(v => v.id === servico.veiculoId) : null;
-            const row = listaPagamentosRealizados.insertRow();
-            row.innerHTML = `
-                <td>${new Date(pag.dataPagamento).toLocaleString('pt-BR')}</td>
-                <td>${servico ? servico.tipoServico : 'N/A'} (${veiculo ? veiculo.placa : 'N/A'})</td>
-                <td>R$ ${pag.valor.toFixed(2)}</td>
-                <td>${pag.formaPagamento}</td>
-                <td><button class="btn btn-sm btn-outline-secondary btn-ver-comprovante" data-id="${pag.id}">Ver</button></td>
-            `;
-        });
-    }
-    
-    listaPagamentosRealizados.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-ver-comprovante')) {
-            const id = parseInt(e.target.dataset.id);
-            const pagamento = pagamentos.find(p => p.id === id);
-            const servico = servicos.find(s => s.id === pagamento.servicoId);
-            const veiculo = servico ? veiculos.find(v => v.id === servico.veiculoId) : null;
-            const cliente = veiculo ? clientes.find(c => c.id === veiculo.clienteId) : null;
-
-            const comprovanteConteudo = `
-LAVA-RÁPIDO XPTO
------------------------------------------
-COMPROVANTE DE PAGAMENTO
------------------------------------------
-Data/Hora: ${new Date(pagamento.dataPagamento).toLocaleString('pt-BR')}
-Cliente: ${cliente ? cliente.nome : 'N/A'}
-Veículo: ${veiculo ? `${veiculo.placa} - ${veiculo.modelo}` : 'N/A'}
-Serviço: ${servico ? servico.tipoServico : 'N/A'}
-Valor: R$ ${pagamento.valor.toFixed(2)}
-Forma de Pagamento: ${pagamento.formaPagamento}
------------------------------------------
-Obrigado pela preferência!
-            `;
-            document.getElementById('comprovanteConteudo').textContent = comprovanteConteudo.trim();
-            modalComprovante.show();
-        }
-    });
-
-    // --- Relatórios ---
-    function renderRelatorios() {
-        const hoje = new Date().toLocaleDateString('pt-BR');
-        let atendimentosHoje = 0;
-        let faturamentoHoje = 0;
-
-        const historicoServicosBody = document.getElementById('historicoServicos');
-        historicoServicosBody.innerHTML = '';
-
-        const servicosConcluidosPagos = servicos.filter(s => s.status === 'Concluído' && s.pago);
-        servicosConcluidosPagos.sort((a,b) => new Date(b.dataSaida) - new Date(a.dataSaida) );
-
-        servicosConcluidosPagos.forEach(servico => {
-            const dataSaidaFormatada = new Date(servico.dataSaida).toLocaleDateString('pt-BR');
-            if (dataSaidaFormatada === hoje) {
-                atendimentosHoje++;
-                faturamentoHoje += servico.valor;
-            }
-
-            const veiculo = veiculos.find(v => v.id === servico.veiculoId);
-            const cliente = veiculo ? clientes.find(c => c.id === veiculo.clienteId) : null;
-            const funcionario = funcionarios.find(f => f.id === servico.funcionarioId);
-
-            const row = historicoServicosBody.insertRow();
-            row.innerHTML = `
-                <td>${new Date(servico.dataSaida).toLocaleString('pt-BR')}</td>
-                <td>${veiculo ? veiculo.placa : 'N/A'}</td>
-                <td>${cliente ? cliente.nome : 'N/A'}</td>
-                <td>${servico.tipoServico}</td>
-                <td>R$ ${servico.valor.toFixed(2)}</td>
-                <td>${funcionario ? funcionario.nome : 'N/A'}</td>
-            `;
-        });
-
-        document.getElementById('atendimentosHoje').textContent = atendimentosHoje;
-        document.getElementById('faturamentoHoje').textContent = `R$ ${faturamentoHoje.toFixed(2)}`;
-    }
-
-    // --- Home Dashboard ---
-    function renderHomeDashboard() {
-        // Veículos em Serviço
-        const ulVeiculosEmServico = document.getElementById('veiculosEmServicoHome');
-        ulVeiculosEmServico.innerHTML = '';
-        const emServico = servicos.filter(s => s.status === 'Em Serviço');
-        if (emServico.length > 0) {
-            emServico.forEach(s => {
-                const veiculo = veiculos.find(v => v.id === s.veiculoId);
-                const funcionario = funcionarios.find(f => f.id === s.funcionarioId);
-                const li = document.createElement('li');
-                li.className = 'list-group-item';
-                li.textContent = `${veiculo ? veiculo.placa : 'N/A'} (${s.tipoServico}) - ${funcionario ? funcionario.nome : 'Não atribuído'}`;
-                ulVeiculosEmServico.appendChild(li);
-            });
-        } else {
-            ulVeiculosEmServico.innerHTML = '<li class="list-group-item">Nenhum veículo em serviço.</li>';
-        }
-
-        // Próximos Agendamentos (ex: próximos 3)
-        const ulProximosAgendamentos = document.getElementById('proximosAgendamentosHome');
-        ulProximosAgendamentos.innerHTML = '';
-        const agora = new Date();
-        const proximos = agendamentos
-            .filter(ag => (ag.status === 'Pendente' || ag.status === 'Confirmado') && new Date(ag.dataHora) >= agora)
-            .sort((a,b) => new Date(a.dataHora) - new Date(b.dataHora))
-            .slice(0, 3); // Pega os 3 mais próximos
-
-        if (proximos.length > 0) {
-            proximos.forEach(ag => {
-                const li = document.createElement('li');
-                li.className = 'list-group-item';
-                li.textContent = `${new Date(ag.dataHora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${ag.clienteNome} (${ag.veiculoInfo})`;
-                ulProximosAgendamentos.appendChild(li);
-            });
-        } else {
-            ulProximosAgendamentos.innerHTML = '<li class="list-group-item">Nenhum agendamento próximo.</li>';
-        }
-    }
-
-    // --- Initial Renders ---
-    function initializeApp() {
-        renderClientes();
-        renderVeiculos();
-        renderFuncionarios();
-        renderServicosAtivos();
-        renderAgendamentos();
-        renderServicosParaPagamento();
-        renderPagamentosRealizados();
-        renderRelatorios();
-        renderHomeDashboard(); // Para a aba inicial
-        
-        // Popula selects que dependem de dados já carregados
-        populateClienteSelectors();
-        populateVeiculoSelectors();
-        populateFuncionarioSelectors();
-    }
-
-    initializeApp();
+    salvarDados();
+    renderizarClientes();
+    popularDropdownClientes();
+    modalAddCliente.hide();
+    this.reset();
 });
+
+function renderizarClientes() {
+    const tbody = document.getElementById('listaClientes');
+    tbody.innerHTML = '';
+    clientes.forEach(cli => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${cli.id}</td>
+            <td>${cli.nomeCliente}</td>
+            <td>${cli.telefone}</td>
+            <td>${cli.email || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removerCliente(${cli.id})">Remover</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function removerCliente(idCliente) {
+    if (veiculos.some(v => v.idCliente === idCliente)) {
+        alert('Não é possível remover cliente com veículos cadastrados. Remova os veículos primeiro.');
+        return;
+    }
+    if (confirm(`Remover cliente ${clientes.find(c=>c.id === idCliente)?.nomeCliente}?`)) {
+        clientes = clientes.filter(cli => cli.id !== idCliente);
+        salvarDados();
+        renderizarClientes();
+        popularDropdownClientes();
+        popularDropdownVeiculos();
+    }
+}
+
+document.getElementById('formAddVeiculo').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const placa = document.getElementById('veiculoPlaca').value.toUpperCase();
+    if (veiculos.some(v => v.placa === placa)) {
+        alert('Veículo com esta placa já cadastrado.');
+        document.getElementById('veiculoPlaca').focus();
+        return;
+    }
+    veiculos.push({
+        id: proximoId(veiculos),
+        idCliente: parseInt(document.getElementById('veiculoClienteId').value),
+        placa: placa,
+        modelo: document.getElementById('veiculoModelo').value,
+        observacoes: document.getElementById('veiculoObservacoes').value
+    });
+    salvarDados();
+    renderizarVeiculos();
+    popularDropdownVeiculos();
+    modalAddVeiculo.hide();
+    this.reset();
+});
+
+function renderizarVeiculos() {
+    const tbody = document.getElementById('listaVeiculos');
+    tbody.innerHTML = '';
+    veiculos.forEach(vec => {
+        const cliente = clientes.find(cli => cli.id === vec.idCliente);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${vec.id}</td>
+            <td>${vec.placa}</td>
+            <td>${vec.modelo}</td>
+            <td>${cliente ? cliente.nomeCliente : 'Cliente não encontrado'}</td>
+            <td>${vec.observacoes || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removerVeiculo(${vec.id})">Remover</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function removerVeiculo(idVeiculo) {
+     if (atendimentos.some(at => at.idVeiculo === idVeiculo && (at.statusAtendimento === 'em_servico' || at.statusAtendimento === 'aguardando_pagamento'))) {
+        alert('Não é possível remover veículo com atendimento em andamento.');
+        return;
+    }
+    if (confirm(`Remover veículo ${veiculos.find(v=>v.id === idVeiculo)?.placa}?`)) {
+        veiculos = veiculos.filter(vec => vec.id !== idVeiculo);
+        salvarDados();
+        renderizarVeiculos();
+        popularDropdownVeiculos();
+    }
+}
+
+document.getElementById('formAddFuncionario').addEventListener('submit', function(e) {
+    e.preventDefault();
+    funcionarios.push({
+        id: proximoId(funcionarios), // idFuncionario
+        nomeFuncionario: document.getElementById('funcionarioNome').value,
+        funcao: document.getElementById('funcionarioFuncao').value,
+        statusFuncionario: document.getElementById('funcionarioStatus').value
+    });
+    salvarDados();
+    renderizarFuncionarios();
+    popularDropdownFuncionarios();
+    modalAddFuncionario.hide();
+    this.reset();
+});
+
+document.getElementById('formEditFuncionario').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('editFuncionarioId').value);
+    const funcIndex = funcionarios.findIndex(f => f.id === id);
+    if (funcIndex > -1) {
+        funcionarios[funcIndex].nomeFuncionario = document.getElementById('editFuncionarioNome').value;
+        funcionarios[funcIndex].funcao = document.getElementById('editFuncionarioFuncao').value;
+        funcionarios[funcIndex].statusFuncionario = document.getElementById('editFuncionarioStatus').value;
+        salvarDados();
+        renderizarFuncionarios();
+        popularDropdownFuncionarios();
+        modalEditFuncionario.hide();
+    }
+});
+
+function abrirModalEditFuncionario(idFuncionario) {
+    const func = funcionarios.find(f => f.id === idFuncionario);
+    if (func) {
+        document.getElementById('editFuncionarioId').value = func.id;
+        document.getElementById('editFuncionarioNome').value = func.nomeFuncionario;
+        document.getElementById('editFuncionarioFuncao').value = func.funcao;
+        document.getElementById('editFuncionarioStatus').value = func.statusFuncionario;
+        modalEditFuncionario.show();
+    }
+}
+
+function removerFuncionario(idFuncionario) {
+    if (atendimentos.some(at => at.idFuncionario === idFuncionario && (at.statusAtendimento === 'em_servico' || at.statusAtendimento === 'aguardando_pagamento'))) {
+        alert('Não é possível remover funcionário com atendimento em andamento associado.');
+        return;
+    }
+    if (confirm(`Remover funcionário ${funcionarios.find(f=>f.id === idFuncionario)?.nomeFuncionario}?`)) {
+        funcionarios = funcionarios.filter(func => func.id !== idFuncionario);
+        salvarDados();
+        renderizarFuncionarios();
+        popularDropdownFuncionarios();
+    }
+}
+
+function renderizarFuncionarios() {
+    const tbody = document.getElementById('listaFuncionarios');
+    tbody.innerHTML = '';
+    funcionarios.forEach(func => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${func.id}</td>
+            <td>${func.nomeFuncionario}</td>
+            <td>${func.funcao || '-'}</td>
+            <td><span class="badge bg-${func.statusFuncionario === 'ativo' ? 'success' : 'danger'}">${func.statusFuncionario}</span></td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="abrirModalEditFuncionario(${func.id})">Editar</button>
+                <button class="btn btn-sm btn-danger" onclick="removerFuncionario(${func.id})">Remover</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+
+function adicionarServicoAoAtendimentoTemporario() {
+    const tipo = document.getElementById('novoTipoServico').value;
+    const valor = parseFloat(document.getElementById('novoValorServico').value);
+    const qtd = parseInt(document.getElementById('novoQtdServico').value);
+
+    if (!tipo || isNaN(valor) || valor <= 0 || isNaN(qtd) || qtd <= 0) {
+        alert('Preencha tipo, valor (maior que zero) e quantidade (maior que zero) do serviço.');
+        return;
+    }
+    servicosTemporariosDoAtendimento.push({ tipoServico: tipo, valorCobradoServico: valor, quantidadeServico: qtd, id: Date.now() }); // id temporário para remoção
+    renderizarServicosTemporarios();
+    document.getElementById('novoTipoServico').value = '';
+    document.getElementById('novoValorServico').value = '';
+    document.getElementById('novoQtdServico').value = '1';
+    document.getElementById('novoTipoServico').focus();
+}
+
+function removerServicoTemporario(idTemp) {
+    servicosTemporariosDoAtendimento = servicosTemporariosDoAtendimento.filter(s => s.id !== idTemp);
+    renderizarServicosTemporarios();
+}
+
+function renderizarServicosTemporarios() {
+    const ul = document.getElementById('listaServicosTemporarios');
+    const totalSpan = document.getElementById('totalServicosTemporarios');
+    ul.innerHTML = '';
+    let total = 0;
+    servicosTemporariosDoAtendimento.forEach(s => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.innerHTML = `
+            ${s.tipoServico} (Qtd: ${s.quantidadeServico} x R$ ${s.valorCobradoServico.toFixed(2)}) = R$ ${(s.quantidadeServico * s.valorCobradoServico).toFixed(2)}
+            <button type="button" class="btn btn-xs btn-danger p-1" onclick="removerServicoTemporario(${s.id})">×</button>
+        `;
+        ul.appendChild(li);
+        total += s.quantidadeServico * s.valorCobradoServico;
+    });
+    totalSpan.textContent = total.toFixed(2);
+}
+
+document.getElementById('formNovoAtendimento').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const idVeiculo = parseInt(document.getElementById('atendimentoVeiculoId').value);
+    const idFuncionario = parseInt(document.getElementById('atendimentoFuncionarioId').value);
+
+    if (!idVeiculo || !idFuncionario) {
+        alert('Selecione Veículo e Funcionário.');
+        return;
+    }
+    if (servicosTemporariosDoAtendimento.length === 0) {
+        alert('Adicione pelo menos um serviço ao atendimento.');
+        return;
+    }
+
+    const novoAtendimentoId = proximoId(atendimentos);
+    atendimentos.push({
+        id: novoAtendimentoId,
+        idVeiculo: idVeiculo,
+        idFuncionario: idFuncionario,
+        dataHoraEntrada: new Date(),
+        dataHoraSaida: null,
+        statusAtendimento: 'em_servico'
+    });
+
+    servicosTemporariosDoAtendimento.forEach(s => {
+        servicos_atendimento.push({
+            id: proximoId(servicos_atendimento),
+            idAtendimento: novoAtendimentoId,
+            tipoServico: s.tipoServico,
+            valorCobradoServico: s.valorCobradoServico,
+            quantidadeServico: s.quantidadeServico
+        });
+    });
+
+    salvarDados();
+    renderizarAtendimentos();
+    atualizarDashboard();
+    modalNovoAtendimento.hide();
+    this.reset();
+    servicosTemporariosDoAtendimento = [];
+    renderizarServicosTemporarios();
+});
+
+function concluirServicosDoAtendimento(idAtendimento) {
+    const atendimento = atendimentos.find(at => at.id === idAtendimento);
+    if (atendimento && atendimento.statusAtendimento === 'em_servico') {
+        atendimento.statusAtendimento = 'aguardando_pagamento';
+        atendimento.dataHoraSaida = new Date();
+        salvarDados();
+        renderizarAtendimentos();
+        atualizarDashboard();
+    }
+}
+
+function abrirModalPagamento(idAtendimento) {
+    const atendimento = atendimentos.find(at => at.id === idAtendimento);
+    if (!atendimento) return;
+
+    const veiculo = veiculos.find(v => v.id === atendimento.idVeiculo);
+    const cliente = clientes.find(c => c.id === veiculo?.idCliente);
+    const servicosDoAtend = servicos_atendimento.filter(sa => sa.idAtendimento === idAtendimento);
+    let valorTotal = 0;
+    servicosDoAtend.forEach(s => valorTotal += s.valorCobradoServico * s.quantidadeServico);
+
+    document.getElementById('pagamentoAtendimentoId').value = idAtendimento;
+    document.getElementById('infoPagamentoAtendimentoId').textContent = idAtendimento;
+    document.getElementById('pagamentoVeiculoInfo').textContent = `${veiculo?.modelo} (${veiculo?.placa}) - Cliente: ${cliente?.nomeCliente || 'N/A'}`;
+    document.getElementById('pagamentoValorTotalInfo').textContent = valorTotal.toFixed(2);
+    document.getElementById('pagamentoValorTransacao').value = valorTotal.toFixed(2);
+    document.getElementById('pagamentoValorTransacao').min = valorTotal.toFixed(2);
+
+    modalRegistrarPagamento.show();
+}
+
+document.getElementById('formRegistrarPagamento').addEventListener('submit', function(e){
+    e.preventDefault();
+    const idAtendimento = parseInt(document.getElementById('pagamentoAtendimentoId').value);
+    const valorTransacao = parseFloat(document.getElementById('pagamentoValorTransacao').value);
+    const tipoTransacao = document.getElementById('pagamentoTipoTransacao').value;
+
+    const atendimento = atendimentos.find(at => at.id === idAtendimento);
+    if (!atendimento) return;
+    
+    const servicosDoAtend = servicos_atendimento.filter(sa => sa.idAtendimento === idAtendimento);
+    let valorTotalServicos = 0;
+    servicosDoAtend.forEach(s => valorTotalServicos += s.valorCobradoServico * s.quantidadeServico);
+
+    if (valorTransacao < valorTotalServicos) {
+        alert(`O valor pago (R$ ${valorTransacao.toFixed(2)}) não pode ser menor que o total dos serviços (R$ ${valorTotalServicos.toFixed(2)}).`);
+        return;
+    }
+
+
+    caixa.push({
+        id: proximoId(caixa),
+        idAtendimento: idAtendimento,
+        dataHoraTransacao: new Date(),
+        valorTransacao: valorTransacao,
+        tipoTransacao: tipoTransacao
+    });
+
+    atendimento.statusAtendimento = 'finalizado';
+
+    salvarDados();
+    renderizarAtendimentos();
+    renderizarRelatorios();
+    atualizarDashboard();
+    exportarComprovanteAtendimento(idAtendimento);
+    modalRegistrarPagamento.hide();
+    this.reset();
+});
+
+
+function renderizarAtendimentos() {
+    const tbodyEmAndamento = document.getElementById('listaAtendimentosEmAndamento');
+    const tbodyAguardandoPgto = document.getElementById('listaAtendimentosAguardandoPagamento');
+    tbodyEmAndamento.innerHTML = '';
+    tbodyAguardandoPgto.innerHTML = '';
+
+    atendimentos.forEach(at => {
+        const veiculo = veiculos.find(v => v.id === at.idVeiculo);
+        const cliente = clientes.find(c => c.id === veiculo?.idCliente);
+        const funcionario = funcionarios.find(f => f.id === at.idFuncionario);
+        const servicosDoAtend = servicos_atendimento.filter(sa => sa.idAtendimento === at.id);
+        
+        let htmlServicos = '<ul class="list-unstyled mb-0 small">';
+        let valorTotalAtendimento = 0;
+        servicosDoAtend.forEach(s => {
+            htmlServicos += `<li>- ${s.tipoServico} (R$ ${s.valorCobradoServico.toFixed(2)} x ${s.quantidadeServico})</li>`;
+            valorTotalAtendimento += s.valorCobradoServico * s.quantidadeServico;
+        });
+        htmlServicos += '</ul>';
+
+        if (!veiculo || !funcionario) return;
+
+        const tr = document.createElement('tr');
+        let acoesHtml = '';
+
+        if (at.statusAtendimento === 'em_servico') {
+            acoesHtml = `<button class="btn btn-sm btn-success" onclick="concluirServicosDoAtendimento(${at.id})">Concluir Serviços</button>`;
+            tr.innerHTML = `
+                <td>${at.id}</td>
+                <td>${veiculo.placa}</td>
+                <td>${cliente?.nomeCliente || 'N/A'}</td>
+                <td>${funcionario.nomeFuncionario}</td>
+                <td>${new Date(at.dataHoraEntrada).toLocaleString()}</td>
+                <td><span class="badge bg-info text-dark">Em Serviço</span></td>
+                <td>${htmlServicos}</td>
+                <td>R$ ${valorTotalAtendimento.toFixed(2)}</td>
+                <td>${acoesHtml}</td>
+            `;
+            tbodyEmAndamento.appendChild(tr);
+        } else if (at.statusAtendimento === 'aguardando_pagamento') {
+             acoesHtml = `<button class="btn btn-sm btn-primary" onclick="abrirModalPagamento(${at.id})">Registrar Pagamento</button>`;
+             tr.innerHTML = `
+                <td>${at.id}</td>
+                <td>${veiculo.placa}</td>
+                <td>${cliente?.nomeCliente || 'N/A'}</td>
+                <td>${funcionario.nomeFuncionario}</td>
+                <td>${at.dataHoraSaida ? new Date(at.dataHoraSaida).toLocaleString() : 'N/A'}</td>
+                <td><span class="badge bg-warning text-dark">Aguard. Pagamento</span></td>
+                <td>${htmlServicos}</td>
+                <td>R$ ${valorTotalAtendimento.toFixed(2)}</td>
+                <td>${acoesHtml}</td>
+            `;
+            tbodyAguardandoPgto.appendChild(tr);
+        }
+    });
+}
+
+document.getElementById('formAddAgendamento').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const dataHora = document.getElementById('agendamentoDataHora').value;
+    const idVeiculo = parseInt(document.getElementById('agendamentoVeiculoSelect').value);
+    const obs = document.getElementById('agendamentoObs').value;
+
+    if (!dataHora || !idVeiculo) {
+        alert('Preencha Data/Hora e selecione o Veículo para o agendamento.');
+        return;
+    }
+    
+    agendamentos.push({
+        id: proximoId(agendamentos),
+        dataHora: new Date(dataHora),
+        idVeiculo: idVeiculo,
+        obs
+    });
+    salvarDados();
+    renderizarAgendamentos();
+    atualizarDashboard();
+    modalAddAgendamento.hide();
+    this.reset();
+});
+
+function removerAgendamento(idAgendamento) {
+    agendamentos = agendamentos.filter(a => a.id !== idAgendamento);
+    salvarDados();
+    renderizarAgendamentos();
+    atualizarDashboard();
+}
+
+function renderizarAgendamentos() {
+    const tbody = document.getElementById('listaAgendamentos');
+    tbody.innerHTML = '';
+    const agendamentosOrdenados = [...agendamentos].sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+
+    agendamentosOrdenados.forEach(ag => {
+        const veiculo = veiculos.find(v => v.id === ag.idVeiculo);
+        const cliente = clientes.find(c => c.id === veiculo?.idCliente);
+
+        if (!veiculo || !cliente) return;
+
+        const tr = document.createElement('tr');
+        const agora = new Date();
+        const dataAg = new Date(ag.dataHora);
+        if (dataAg < agora && dataAg.toDateString() !== agora.toDateString()) {
+            tr.classList.add('table-secondary', 'text-muted');
+        } else if (Math.abs(dataAg - agora) < (2 * 60 * 60 * 1000) && dataAg >= agora ) {
+             tr.classList.add('table-warning'); 
+        }
+
+        tr.innerHTML = `
+            <td>${dataAg.toLocaleString()}</td>
+            <td>${cliente.nomeCliente}</td>
+            <td>${veiculo.modelo} (${veiculo.placa})</td>
+            <td>${ag.obs || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removerAgendamento(${ag.id})">Remover</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderizarRelatorios() {
+    const hojeStr = new Date().toLocaleDateString();
+    let atendimentosFinalizadosHoje = 0;
+    let faturamentoHoje = 0;
+
+    const tbodyHistorico = document.getElementById('historicoAtendimentos');
+    tbodyHistorico.innerHTML = '';
+
+    const atendimentosFinalizados = atendimentos.filter(at => at.statusAtendimento === 'finalizado');
+    atendimentosFinalizados.sort((a,b) => new Date(b.dataHoraSaida) - new Date(a.dataHoraSaida)); 
+
+    atendimentosFinalizados.forEach(at => {
+        const transacaoCaixa = caixa.find(cx => cx.idAtendimento === at.id);
+        const dataSaidaAtendimentoStr = at.dataHoraSaida ? new Date(at.dataHoraSaida).toLocaleDateString() : '';
+        
+        if (dataSaidaAtendimentoStr === hojeStr && transacaoCaixa) {
+            atendimentosFinalizadosHoje++;
+            faturamentoHoje += transacaoCaixa.valorTransacao;
+        }
+
+        const veiculo = veiculos.find(v => v.id === at.idVeiculo);
+        const cliente = clientes.find(c => c.id === veiculo?.idCliente);
+        const funcionario = funcionarios.find(f => f.id === at.idFuncionario);
+
+        if (!veiculo || !cliente || !funcionario || !transacaoCaixa) return;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${at.id}</td>
+            <td>${new Date(at.dataHoraSaida).toLocaleString()}</td>
+            <td>${cliente.nomeCliente}</td>
+            <td>${veiculo.modelo} (${veiculo.placa})</td>
+            <td>${funcionario.nomeFuncionario}</td>
+            <td>R$ ${transacaoCaixa.valorTransacao.toFixed(2)}</td>
+        `;
+        tbodyHistorico.appendChild(tr);
+    });
+
+    document.getElementById('atendimentosHoje').textContent = atendimentosFinalizadosHoje;
+    document.getElementById('faturamentoHoje').textContent = faturamentoHoje.toFixed(2);
+}
+
+function atualizarDashboard() {
+    const emServicoCount = atendimentos.filter(at => at.statusAtendimento === 'em_servico').length;
+    const aguardandoPgtoCount = atendimentos.filter(at => at.statusAtendimento === 'aguardando_pagamento').length;
+    document.getElementById('totalVeiculosEmAtendimento').textContent = emServicoCount + aguardandoPgtoCount;
+
+    const agora = new Date();
+    const proximas24h = new Date(agora);
+    proximas24h.setDate(agora.getDate() + 1);
+
+    const agendamentosProximos = agendamentos.filter(ag => {
+        const dataAg = new Date(ag.dataHora);
+        return dataAg >= agora && dataAg <= proximas24h;
+    }).sort((a,b) => new Date(a.dataHora) - new Date(b.dataHora)).slice(0, 3);
+
+    const listaAgendamentosProximosEl = document.getElementById('agendamentosProximosLista');
+    listaAgendamentosProximosEl.innerHTML = '';
+    if (agendamentosProximos.length > 0) {
+        const ul = document.createElement('ul');
+        ul.className = 'list-group list-group-flush';
+        agendamentosProximos.forEach(ag => {
+            const veiculo = veiculos.find(v => v.id === ag.idVeiculo);
+            const cliente = clientes.find(c => c.id === veiculo?.idCliente);
+            if(cliente && veiculo) {
+                const li = document.createElement('li');
+                li.className = 'list-group-item small';
+                li.textContent = `${new Date(ag.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${cliente.nomeCliente} (${veiculo.placa})`;
+                ul.appendChild(li);
+            }
+        });
+        listaAgendamentosProximosEl.appendChild(ul);
+    } else {
+        listaAgendamentosProximosEl.textContent = 'Nenhum agendamento para as próximas 24 horas.';
+    }
+}
+
+// comprovante 
+function exportarComprovanteAtendimento(idAtendimento) {
+    const atendimento = atendimentos.find(at => at.id === idAtendimento);
+    if (!atendimento) return;
+
+    const veiculo = veiculos.find(v => v.id === atendimento.idVeiculo);
+    const cliente = clientes.find(c => c.id === veiculo?.idCliente);
+    const funcionario = funcionarios.find(f => f.id === atendimento.idFuncionario);
+    const transacao = caixa.find(cx => cx.idAtendimento === idAtendimento && cx.idAtendimento === atendimento.id);
+    const servicosDoAtend = servicos_atendimento.filter(sa => sa.idAtendimento === idAtendimento);
+
+    let comprovanteConteudo = `
+        LAVA-RÁPIDO APP - COMPROVANTE
+        ---------------------------------------
+        Atendimento ID: ${atendimento.id}
+        Data/Hora Saída: ${atendimento.dataHoraSaida ? new Date(atendimento.dataHoraSaida).toLocaleString() : 'N/A'}
+        Cliente: ${cliente?.nomeCliente || 'N/A'} (Tel: ${cliente?.telefone || 'N/A'})
+        Veículo: ${veiculo?.modelo || 'N/A'} (Placa: ${veiculo?.placa || 'N/A'})
+        Funcionário: ${funcionario?.nomeFuncionario || 'N/A'}
+        ---------------------------------------
+        Serviços Realizados:
+`;
+    let valorTotalCalculado = 0;
+    servicosDoAtend.forEach(s => {
+        const subtotal = s.valorCobradoServico * s.quantidadeServico;
+        comprovanteConteudo += `        - ${s.tipoServico} (Qtd: ${s.quantidadeServico} x R$ ${s.valorCobradoServico.toFixed(2)}) = R$ ${subtotal.toFixed(2)}\n`;
+        valorTotalCalculado += subtotal;
+    });
+    comprovanteConteudo += `
+        ---------------------------------------
+        Valor Total dos Serviços: R$ ${valorTotalCalculado.toFixed(2)}
+        Valor Pago: R$ ${transacao ? transacao.valorTransacao.toFixed(2) : 'N/A'}
+        Tipo Pagamento: ${transacao ? transacao.tipoTransacao : 'N/A'}
+        Data Pagamento: ${transacao ? new Date(transacao.dataHoraTransacao).toLocaleString() : 'N/A'}
+        ---------------------------------------
+        Obrigado pela preferência!
+    `;
+    
+    const blob = new Blob([comprovanteConteudo.replace(/(\r\n|\n|\r)/gm, "\r\n")], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `comprovante_atendimento_${atendimento.id}_${veiculo?.placa || 'VEICULO'}.txt`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+
+function popularDropdownClientes() {
+    const select = document.getElementById('veiculoClienteId');
+    if (!select) return;
+    select.innerHTML = '<option value="">Selecione o Cliente...</option>';
+    clientes.forEach(cli => {
+        const option = document.createElement('option');
+        option.value = cli.id;
+        option.textContent = `${cli.nomeCliente} (ID: ${cli.id})`;
+        select.appendChild(option);
+    });
+}
+
+function popularDropdownVeiculos() {
+    const selects = [
+        document.getElementById('atendimentoVeiculoId'),
+        document.getElementById('agendamentoVeiculoSelect')
+    ];
+    selects.forEach(select => {
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione o Veículo...</option>';
+        veiculos.forEach(vec => {
+            const cliente = clientes.find(cli => cli.id === vec.idCliente);
+            if (cliente) {
+                const option = document.createElement('option');
+                option.value = vec.id;
+                option.textContent = `${cliente.nomeCliente} - ${vec.modelo} (${vec.placa})`;
+                select.appendChild(option);
+            }
+        });
+        select.value = currentValue;
+    });
+}
+
+function popularDropdownFuncionarios() {
+    const select = document.getElementById('atendimentoFuncionarioId');
+    if (!select) return;
+    select.innerHTML = '<option value="">Selecione o Funcionário...</option>';
+    funcionarios.filter(f => f.statusFuncionario === 'ativo').forEach(func => {
+        const option = document.createElement('option');
+        option.value = func.id;
+        option.textContent = func.nomeFuncionario;
+        select.appendChild(option);
+    });
+}
+
+window.onload = () => {
+    renderizarClientes();
+    renderizarVeiculos();
+    renderizarFuncionarios();
+    renderizarAtendimentos();
+    renderizarAgendamentos();
+    renderizarRelatorios();
+
+    popularDropdownClientes();
+    popularDropdownVeiculos();
+    popularDropdownFuncionarios();
+    
+    atualizarDashboard(); 
+    
+    document.getElementById('modalNovoAtendimento').addEventListener('show.bs.modal', () => {
+        popularDropdownVeiculos();
+        popularDropdownFuncionarios();
+        servicosTemporariosDoAtendimento = [];
+        renderizarServicosTemporarios();
+    });
+    document.getElementById('modalAddVeiculo').addEventListener('show.bs.modal', popularDropdownClientes);
+    document.getElementById('modalAddAgendamento').addEventListener('show.bs.modal', popularDropdownVeiculos);
+
+
+    mostrarSecao('dashboard');
+    document.querySelector('.navbar-nav .nav-link[onclick*="dashboard"]').classList.add('active');
+
+    setInterval(() => {
+        if (document.getElementById('agendamentos').style.display === 'block') {
+            renderizarAgendamentos();
+        }
+        atualizarDashboard(); 
+    }, 60 * 1000); 
+};
