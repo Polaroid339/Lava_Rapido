@@ -3,374 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lava-Rápido Simples (DER Integrado)</title>
+    <title>Lava-Rápido App Simples</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Lava-Rápido App v2</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand" href="#">Lava-Rápido DB</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" onclick="mostrarSecao('dashboard')">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="mostrarSecao('atendimentos')">Atendimentos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="mostrarSecao('clientes')">Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="mostrarSecao('veiculos')">Veículos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="mostrarSecao('agendamentos')">Agendamentos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="mostrarSecao('funcionarios')">Funcionários</a>
-                    </li>
-                     <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="mostrarSecao('relatorios')">Relatórios</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="mostrarSecao('dashboard')">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="mostrarSecao('clientes')">Clientes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="mostrarSecao('veiculos')">Veículos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="mostrarSecao('funcionarios')">Funcionários</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="mostrarSecao('atendimentos')">Atendimentos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="mostrarSecao('caixa')">Caixa</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <!-- Seção Dashboard -->
         <section id="dashboard" class="conteudo-secao">
             <h2>Dashboard</h2>
             <div class="row">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Veículos em Atendimento</h5>
-                            <p class="card-text" id="totalVeiculosEmAtendimento">0</p>
-                            <button class="btn btn-sm btn-info" onclick="mostrarSecao('atendimentos')">Ver Detalhes</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Agendamentos Próximos</h5>
-                            <div id="agendamentosProximosLista">Nenhum agendamento próximo.</div>
-                        </div>
-                    </div>
-                </div>
+                <div class="col-md-3"><div class="card p-3 mb-2">Total Clientes: <span id="totalClientes">0</span></div></div>
+                <div class="col-md-3"><div class="card p-3 mb-2">Total Veículos: <span id="totalVeiculos">0</span></div></div>
+                <div class="col-md-3"><div class="card p-3 mb-2">Atend. em Andamento: <span id="totalAtendimentosAndamento">0</span></div></div>
+                <div class="col-md-3"><div class="card p-3 mb-2">Aguardando Pag.: <span id="totalAguardandoPagamento">0</span></div></div>
             </div>
         </section>
 
         <section id="clientes" class="conteudo-secao" style="display: none;">
-            <h2>Cadastro de Clientes</h2>
-            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAddCliente">Novo Cliente</button>
+            <h2>Clientes</h2>
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalAddCliente">Novo Cliente</button>
             <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Telefone</th>
-                        <th>Email</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>ID</th><th>Nome</th><th>Telefone</th><th>Email</th><th>Ações</th></tr></thead>
                 <tbody id="listaClientes"></tbody>
             </table>
         </section>
 
         <section id="veiculos" class="conteudo-secao" style="display: none;">
-            <h2>Cadastro de Veículos</h2>
+            <h2>Veículos</h2>
             <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAddVeiculo">Novo Veículo</button>
             <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Placa</th>
-                        <th>Modelo</th>
-                        <th>Cliente</th>
-                        <th>Observações</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>ID</th><th>Placa</th><th>Modelo</th><th>Cliente</th><th>Obs.</th><th>Ações</th></tr></thead>
                 <tbody id="listaVeiculos"></tbody>
+            </table>
+        </section>
+
+        <section id="funcionarios" class="conteudo-secao" style="display: none;">
+            <h2>Funcionários</h2>
+            <button class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#modalAddFuncionario">Novo Funcionário</button>
+            <table class="table table-striped">
+                <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody id="listaFuncionarios"></tbody>
             </table>
         </section>
 
         <section id="atendimentos" class="conteudo-secao" style="display: none;">
             <h2>Atendimentos</h2>
-            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovoAtendimento">Registrar Novo Atendimento</button>
+            <button class="btn btn-warning mb-3" data-bs-toggle="modal" data-bs-target="#modalAddAtendimento">Registrar Entrada de Veículo</button>
             
-            <h4>Atendimentos em Andamento</h4>
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Veículo (Placa)</th>
-                        <th>Cliente</th>
-                        <th>Funcionário</th>
-                        <th>Entrada</th>
-                        <th>Status</th>
-                        <th>Serviços</th>
-                        <th>Valor Total</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="listaAtendimentosEmAndamento"></tbody>
-            </table>
-
-            <h4 class="mt-4">Atendimentos Aguardando Pagamento</h4>
-             <table class="table table-warning">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Veículo (Placa)</th>
-                        <th>Cliente</th>
-                        <th>Funcionário</th>
-                        <th>Saída Prevista</th>
-                        <th>Status</th>
-                        <th>Serviços</th>
-                        <th>Valor Total</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="listaAtendimentosAguardandoPagamento"></tbody>
-            </table>
-        </section>
-        
-        <section id="agendamentos" class="conteudo-secao" style="display: none;">
-            <h2>Agendamento de Serviços</h2>
-            <button class="btn btn-warning mb-3" data-bs-toggle="modal" data-bs-target="#modalAddAgendamento">Novo Agendamento</button>
-            <table class="table table-info">
-                <thead>
-                    <tr>
-                        <th>Data/Hora</th>
-                        <th>Cliente</th>
-                        <th>Veículo (Placa)</th>
-                        <th>Observações</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="listaAgendamentos"></tbody>
-            </table>
+            <h4 class="mt-4">Em Andamento / Aguardando Pagamento</h4>
+            <div id="listaAtendimentosAtivos"></div>
         </section>
 
-        <section id="funcionarios" class="conteudo-secao" style="display: none;">
-            <h2>Gestão de Funcionários</h2>
-            <button class="btn btn-dark mb-3" data-bs-toggle="modal" data-bs-target="#modalAddFuncionario">Novo Funcionário</button>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Função</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="listaFuncionarios"></tbody>
+        <section id="caixa" class="conteudo-secao" style="display: none;">
+            <h2>Caixa - Transações (Histórico de Pagamentos)</h2>
+            <table class="table table-striped">
+                <thead><tr><th>ID Trans.</th><th>ID Atend.</th><th>Data/Hora</th><th>Valor (R$)</th><th>Tipo</th></tr></thead>
+                <tbody id="listaTransacoesCaixa"></tbody>
             </table>
-        </section>
-
-        <section id="relatorios" class="conteudo-secao" style="display: none;">
-            <h2>Relatórios e Histórico</h2>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <h4>Atendimentos Finalizados Hoje: <span id="atendimentosHoje">0</span></h4>
-                </div>
-                <div class="col-md-6">
-                    <h4>Faturamento Hoje (Caixa): R$ <span id="faturamentoHoje">0.00</span></h4>
-                </div>
-            </div>
-            <h4>Histórico de Atendimentos Finalizados</h4>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>ID Atend.</th>
-                        <th>Data Saída</th>
-                        <th>Cliente</th>
-                        <th>Veículo</th>
-                        <th>Funcionário</th>
-                        <th>Valor Pago</th>
-                    </tr>
-                </thead>
-                <tbody id="historicoAtendimentos"></tbody>
-            </table>
+            <h4 class="mt-3">Total Arrecadado: R$ <span id="totalArrecadadoCaixa">0.00</span></h4>
         </section>
     </div>
 
     <div class="modal fade" id="modalAddCliente" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Novo Cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formAddCliente">
-                        <div class="mb-3"><label for="clienteNome" class="form-label">Nome</label><input type="text" class="form-control" id="clienteNome" required></div>
-                        <div class="mb-3"><label for="clienteTelefone" class="form-label">Telefone</label><input type="text" class="form-control" id="clienteTelefone" required></div>
-                        <div class="mb-3"><label for="clienteEmail" class="form-label">Email</label><input type="email" class="form-control" id="clienteEmail"></div>
-                        <button type="submit" class="btn btn-primary">Salvar Cliente</button>
-                    </form>
-                </div>
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Novo Cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="formAddCliente">
+                    <div class="mb-3"><label class="form-label">Nome</label><input type="text" class="form-control" id="clienteNome" required></div>
+                    <div class="mb-3"><label class="form-label">Telefone</label><input type="text" class="form-control" id="clienteTelefone"></div>
+                    <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="clienteEmail"></div>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </form>
             </div>
-        </div>
+        </div></div>
     </div>
 
     <div class="modal fade" id="modalAddVeiculo" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Adicionar Veículo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formAddVeiculo">
-                        <div class="mb-3">
-                            <label for="veiculoClienteId" class="form-label">Cliente</label>
-                            <select class="form-select" id="veiculoClienteId" required></select>
-                        </div>
-                        <div class="mb-3"><label for="veiculoPlaca" class="form-label">Placa</label><input type="text" class="form-control" id="veiculoPlaca" required></div>
-                        <div class="mb-3"><label for="veiculoModelo" class="form-label">Modelo</label><input type="text" class="form-control" id="veiculoModelo" required></div>
-                        <div class="mb-3"><label for="veiculoObservacoes" class="form-label">Observações</label><textarea class="form-control" id="veiculoObservacoes"></textarea></div>
-                        <button type="submit" class="btn btn-primary">Salvar Veículo</button>
-                    </form>
-                </div>
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Novo Veículo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="formAddVeiculo">
+                    <div class="mb-3"><label class="form-label">Cliente</label><select class="form-select" id="veiculoClienteId" required></select></div>
+                    <div class="mb-3"><label class="form-label">Placa</label><input type="text" class="form-control" id="veiculoPlaca" required></div>
+                    <div class="mb-3"><label class="form-label">Modelo</label><input type="text" class="form-control" id="veiculoModelo"></div>
+                    <div class="mb-3"><label class="form-label">Observações</label><textarea class="form-control" id="veiculoObservacoes"></textarea></div>
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                </form>
             </div>
-        </div>
+        </div></div>
     </div>
-
-    <div class="modal fade" id="modalNovoAtendimento" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Registrar Novo Atendimento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formNovoAtendimento">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="atendimentoVeiculoId" class="form-label">Veículo (Cliente - Placa)</label>
-                                <select class="form-select" id="atendimentoVeiculoId" required></select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="atendimentoFuncionarioId" class="form-label">Funcionário Responsável</label>
-                                <select class="form-select" id="atendimentoFuncionarioId" required></select>
-                            </div>
-                        </div>
-                        <hr>
-                        <h6>Serviços do Atendimento</h6>
-                        <div id="servicosDoAtendimentoContainer">
-                            <!-- formulário para adicionar serviço individual -->
-                             <div class="row align-items-end mb-2">
-                                <div class="col-md-5"><label class="form-label-sm">Tipo de Serviço</label><input type="text" class="form-control form-control-sm" id="novoTipoServico"></div>
-                                <div class="col-md-3"><label class="form-label-sm">Valor (R$)</label><input type="number" step="0.01" class="form-control form-control-sm" id="novoValorServico"></div>
-                                <div class="col-md-2"><label class="form-label-sm">Qtd.</label><input type="number" value="1" min="1" class="form-control form-control-sm" id="novoQtdServico"></div>
-                                <div class="col-md-2"><button type="button" class="btn btn-sm btn-info w-100" onclick="adicionarServicoAoAtendimentoTemporario()">Adicionar</button></div>
-                            </div>
-                        </div>
-                        <ul id="listaServicosTemporarios" class="list-group mb-3"></ul>
-                        <p class="text-end"><strong>Total dos Serviços: R$ <span id="totalServicosTemporarios">0.00</span></strong></p>
-                        <button type="submit" class="btn btn-primary">Registrar Atendimento</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalRegistrarPagamento" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Registrar Pagamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formRegistrarPagamento">
-                        <input type="hidden" id="pagamentoAtendimentoId">
-                        <p><strong>Atendimento ID:</strong> <span id="infoPagamentoAtendimentoId"></span></p>
-                        <p><strong>Veículo:</strong> <span id="pagamentoVeiculoInfo"></span></p>
-                        <p><strong>Valor Total a Pagar: R$ <span id="pagamentoValorTotalInfo">0.00</span></strong></p>
-                        <div class="mb-3">
-                            <label for="pagamentoValorTransacao" class="form-label">Valor Pago (R$)</label>
-                            <input type="number" step="0.01" class="form-control" id="pagamentoValorTransacao" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="pagamentoTipoTransacao" class="form-label">Tipo de Transação</label>
-                            <select class="form-select" id="pagamentoTipoTransacao" required>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="CartaoDebito">Cartão de Débito</option>
-                                <option value="CartaoCredito">Cartão de Crédito</option>
-                                <option value="PIX">PIX</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-success">Registrar Pagamento e Finalizar Atendimento</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalAddAgendamento" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Novo Agendamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formAddAgendamento">
-                        <div class="mb-3"><label for="agendamentoDataHora" class="form-label">Data e Hora</label><input type="datetime-local" class="form-control" id="agendamentoDataHora" required></div>
-                        <div class="mb-3">
-                            <label for="agendamentoVeiculoSelect" class="form-label">Veículo (Cliente - Placa)</label>
-                            <select class="form-select" id="agendamentoVeiculoSelect" required></select>
-                        </div>
-                         <div class="mb-3"><label for="agendamentoObs" class="form-label">Observações</label><textarea class="form-control" id="agendamentoObs"></textarea></div>
-                        <button type="submit" class="btn btn-primary">Salvar Agendamento</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    
     <div class="modal fade" id="modalAddFuncionario" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Novo Funcionário</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formAddFuncionario">
-                        <div class="mb-3"><label for="funcionarioNome" class="form-label">Nome</label><input type="text" class="form-control" id="funcionarioNome" required></div>
-                        <div class="mb-3"><label for="funcionarioFuncao" class="form-label">Função</label><input type="text" class="form-control" id="funcionarioFuncao"></div>
-                        <div class="mb-3">
-                            <label for="funcionarioStatus" class="form-label">Status</label>
-                            <select class="form-select" id="funcionarioStatus">
-                                <option value="ativo">Ativo</option>
-                                <option value="inativo">Inativo</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Salvar Funcionário</button>
-                    </form>
-                </div>
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Novo Funcionário</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="formAddFuncionario">
+                    <div class="mb-3"><label class="form-label">Nome</label><input type="text" class="form-control" id="funcionarioNome" required></div>
+                    <div class="mb-3"><label class="form-label">Função</label><input type="text" class="form-control" id="funcionarioFuncao"></div>
+                    <div class="mb-3"><label class="form-label">Status</label>
+                        <select class="form-select" id="funcionarioStatus">
+                            <option value="Ativo">Ativo</option><option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info">Salvar</button>
+                </form>
             </div>
-        </div>
+        </div></div>
     </div>
 
-    <div class="modal fade" id="modalEditFuncionario" tabindex="-1">
-         <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Editar Funcionário</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <form id="formEditFuncionario">
-                        <input type="hidden" id="editFuncionarioId">
-                        <div class="mb-3"><label for="editFuncionarioNome" class="form-label">Nome</label><input type="text" class="form-control" id="editFuncionarioNome" required></div>
-                        <div class="mb-3"><label for="editFuncionarioFuncao" class="form-label">Função</label><input type="text" class="form-control" id="editFuncionarioFuncao"></div>
-                        <div class="mb-3">
-                            <label for="editFuncionarioStatus" class="form-label">Status</label>
-                            <select class="form-select" id="editFuncionarioStatus">
-                                <option value="ativo">Ativo</option>
-                                <option value="inativo">Inativo</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                    </form>
-                </div>
+    <div class="modal fade" id="modalAddAtendimento" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Registrar Entrada de Veículo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="formAddAtendimento">
+                    <div class="mb-3"><label class="form-label">Veículo</label><select class="form-select" id="atendimentoVeiculoId" required></select></div>
+                    <div class="mb-3"><label class="form-label">Funcionário Responsável</label><select class="form-select" id="atendimentoFuncionarioId" required></select></div>
+                    <button type="submit" class="btn btn-warning">Registrar Entrada</button>
+                </form>
             </div>
-        </div>
+        </div></div>
     </div>
 
+    <div class="modal fade" id="modalAddServicoAtendimento" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Adicionar Serviço ao Atendimento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="formAddServicoAtendimento">
+                    <input type="hidden" id="servicoParaAtendimentoId">
+                    <div class="mb-3"><label class="form-label">Tipo do Serviço</label><input type="text" class="form-control" id="servicoTipo" required></div>
+                    <div class="mb-3"><label class="form-label">Valor Cobrado (R$)</label><input type="number" step="0.01" class="form-control" id="servicoValor" required></div>
+                    <div class="mb-3"><label class="form-label">Quantidade</label><input type="number" value="1" class="form-control" id="servicoQuantidade" required></div>
+                    <button type="submit" class="btn btn-primary">Adicionar Serviço</button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+    
+    <div class="modal fade" id="modalRegistrarPagamento" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Registrar Pagamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="formRegistrarPagamento">
+                    <input type="hidden" id="pagamentoAtendimentoId">
+                    <p><strong>Atendimento ID:</strong> <span id="infoPagamentoAtendimentoId"></span></p>
+                    <p><strong>Veículo:</strong> <span id="infoPagamentoVeiculo"></span></p>
+                    <p><strong>Total a Pagar: R$</strong> <span id="infoPagamentoTotal">0.00</span></p>
+                    <div class="mb-3"><label class="form-label">Valor Pago (R$)</label><input type="number" step="0.01" class="form-control" id="pagamentoValorTransacao" required></div>
+                    <div class="mb-3"><label class="form-label">Tipo de Transação</label>
+                        <select class="form-select" id="pagamentoTipoTransacao">
+                            <option value="Dinheiro">Dinheiro</option><option value="Cartão Débito">Cartão Débito</option>
+                            <option value="Cartão Crédito">Cartão Crédito</option><option value="Pix">Pix</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Confirmar Pagamento</button>
+                </form>
+            </div>
+        </div></div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>

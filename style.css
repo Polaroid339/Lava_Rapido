@@ -1,19 +1,44 @@
 body {
-    font-family: sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .conteudo-secao {
     padding: 20px;
-    border: 1px solid #eee;
-    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
     background-color: #f9f9f9;
     margin-bottom: 20px;
 }
 
 .navbar-nav .nav-link.active {
     font-weight: bold;
+    color: #fff !important;
 }
-.form-label-sm {
-    font-size: 0.8rem;
-    margin-bottom: 0.2rem;
+
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.atendimento-card {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    background-color: #fff;
+}
+.atendimento-card h5 {
+    margin-top: 0;
+}
+.servicos-lista {
+    list-style-type: none;
+    padding-left: 0;
+    font-size: 0.9em;
+}
+.servicos-lista li {
+    padding: 3px 0;
+    border-bottom: 1px dashed #eee;
+}
+.servicos-lista li:last-child {
+    border-bottom: none;
 }
